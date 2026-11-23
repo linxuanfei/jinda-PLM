@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: Jinda PLM to ERP interface
+  version: 0.0.0
+  description: |
+    Phase 1 field contract only. No process in this repository serves these
+    routes. A server that claims to implement this contract, before the
+    exchange exists, answers every operation with HTTP 501 and
+    `NotImplemented`.
+
+    津达立 PLM 与公司 ERP 分开运行。本文件只列出以后交换物料主数据、BOM
+    和编码查询时使用的字段。Phase 1 不提供库存数量、库位、价格、采购、销售
+    或凭证，也不定义连接器编码或线束打样报价编码的规则。
+
+    Direction is read-only, ERP reading from PLM. There is no write API.
+
+    InvenTree's own HTTP API remains the PLM application API, including
+    `GET /api/part/` and `GET /api/bom/`. This file does not wrap that API
+    and does not replace the ERP.
+
+    Field names below follow the InvenTree 1.7 API where they are the same
+    value. Sources:
+    https://docs.inventree.org/en/stable/api/schema/part/
+    https://docs.inventree.org/en/stable/api/schema/bom/
+
+    Not part of this contract, even though InvenTree returns them on Part
+    or BomItem: in_stock, total_in_stock, unallocated_stock, external_stock,
+    allocated_to_build_orders, allocated_to_sales_orders, building,
+    scheduled_to_build, required_for_build_orders, required_for_sales_orders,
+    ordering, minimum_stock, maximum_stock, stock_item_count,
+    available_stock, available_substitute_stock, available_variant_stock,
+    on_order, can_build, pricing_min, pricing_max, pricing_min_total,
+    pricing_max_total, pricing_updated, price_breaks, and any currency,
+    supplier price, purchase order, sales order, or invoice field.
+
+    Authentication is not specified. Do not expose an implementation of
+    these routes until an authentication scheme is chosen. InvenTree API
+    tokens are not this contract.
+
+    `GET /erp/v1/coding` does not parse or generate a code. The connector
+    and wire-harness sample-quote modules have no rules yet.
+servers:
+  - url: https://plm.example.invalid
+    description: Not deployed. example.invalid is a reserved name, not a host.
+paths:
+  /erp/v1/part-masters:
+    get:
+      operationId: listPartMasters
+      summary: Part master lookup for a later ERP read.
+      description: |
+        Returns PLM part rows. Identity for the exchange is IPN plus
+        revision, together with inventree_pk. IPN uniqueness is an
+        InvenTree setting and is not assumed here.
+      parameters:
+        - $ref: "#/components/parameters/ipn"
+        - $ref: "#/components/parameters/revision"
+      responses:
+        "200":
+          description: |
+            Contract shape for a later implementation. Phase 1 does not
+            return this status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartMasterList"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+  /erp/v1/boms:
+    get:
+      operationId: listBoms
+      summary: BOM lookup for a later ERP read.
+      description: |
+        Returns the BOM of one assembly identified by IPN and revision.
+        Quantities are design quantities from InvenTree. They are not stock.
+      parameters:
+        - $ref: "#/components/parameters/ipn"
+        - $ref: "#/components/parameters/revision"
+      responses:
+        "200":
+          description: |
+            Contract shape for a later implementation. Phase 1 does not
+            return this status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BomDocument"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+  /erp/v1/coding:
+    get:
+      operationId: lookupCoding
+      summary: Reserved coding lookup. No rules and no parser.
+      description: |
+        Reserved for a later lookup of a connector code (连接器编码) or a
+        wire-harness sample-quote code (线束打样报价编码). The code is an
+        opaque string. This operation must not split it into segments,
+        derive an IPN from it, or invent a format.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: Opaque code. No format is defined.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: |
+            Contract shape for a later implementation that has stored a
+            link. Phase 1 does not return this status. A stored link is not
+            produced by parsing the code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CodingLookup"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+components:
+  parameters:
+    ipn:
+      name: ipn
+      in: query
+      required: true
+      description: InvenTree internal part number (`IPN`).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    revision:
+      name: revision
+      in: query
+      required: false
+      description: InvenTree `revision`. Omit only when the caller intentionally asks for every revision of the IPN.
+      schema:
+        type: string
+        maxLength: 100
+  responses:
+    NotImplemented:
+      description: |
+        The route is not implemented. This is the only response Phase 1
+        allows from a server that claims this contract.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NotImplemented"
+  schemas:
+    NotImplemented:
+      type: object
+      additionalProperties: false
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [not_implemented]
+        message:
+          type: string
+    PartMasterList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartMaster"
+    PartMaster:
+      type: object
+      additionalProperties: false
+      description: |
+        Part master fields taken from the InvenTree Part serializer.
+        Stock, pricing, and ordering fields are absent on purpose.
+      required: [inventree_pk, name]
+      properties:
+        inventree_pk:
+          type: integer
+          description: InvenTree Part `pk`. PLM row id, not an ERP key.
+        IPN:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: InvenTree internal part number.
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        revision:
+          type: string
+          nullable: true
+          maxLength: 100
+        revision_of:
+          type: integer
+          nullable: true
+          description: InvenTree `revision_of` part pk. Null when this row is not a revision of another part.
+        category:
+          type: integer
+          nullable: true
+          description: InvenTree category pk.
+        category_name:
+          type: string
+          nullable: true
+        category_path:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryPathNode"
+        units:
+          type: string
+          nullable: true
+          description: InvenTree units of measure for the part.
+        active:
+          type: boolean
+        assembly:
+          type: boolean
+          description: InvenTree `assembly`. The part can be built from other parts.
+        component:
+          type: boolean
+          description: InvenTree `component`. The part can be used to build other parts.
+        purchaseable:
+          type: boolean
+          description: InvenTree classification flag. Not a price and not a purchase order.
+        salable:
+          type: boolean
+          description: InvenTree classification flag. Not a price and not a sales order.
+        trackable:
+          type: boolean
+        virtual:
+          type: boolean
+        consumable:
+          type: boolean
+        is_template:
+          type: boolean
+        testable:
+          type: boolean
+        locked:
+          type: boolean
+        keywords:
+          type: string
+          nullable: true
+        link:
+          type: string
+          nullable: true
+          description: InvenTree external URL field. Not an ERP endpoint.
+    CategoryPathNode:
+      type: object
+      additionalProperties: false
+      description: InvenTree `TreePath` node (`pk`, `name`). `icon` is omitted.
+      required: [pk, name]
+      properties:
+        pk:
+          type: integer
+        name:
+          type: string
+    BomDocument:
+      type: object
+      additionalProperties: false
+      required: [parent, lines]
+      properties:
+        parent:
+          $ref: "#/components/schemas/PartIdentity"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/BomLine"
+    PartIdentity:
+      type: object
+      additionalProperties: false
+      required: [inventree_pk, name]
+      properties:
+        inventree_pk:
+          type: integer
+        IPN:
+          type: string
+          nullable: true
+          maxLength: 100
+        name:
+          type: string
+          maxLength: 100
+        revision:
+          type: string
+          nullable: true
+          maxLength: 100
+    BomLine:
+      type: object
+      additionalProperties: false
+      description: |
+        Design fields from InvenTree BomItem. Pricing and stock fields on
+        that serializer are not included.
+      required: [inventree_pk, sub_part]
+      properties:
+        inventree_pk:
+          type: integer
+          description: InvenTree BomItem `pk`.
+        sub_part:
+          $ref: "#/components/schemas/PartIdentity"
+        reference:
+          type: string
+          maxLength: 5000
+          description: InvenTree BOM item reference, for example a designator.
+        raw_amount:
+          type: string
+          description: InvenTree `raw_amount`. A string amount that may include a unit.
+        quantity:
+          type: number
+          format: double
+          description: InvenTree `quantity`, derived from `raw_amount` and the component units. Not a stock quantity.
+        piece_count:
+          type: integer
+          description: InvenTree `piece_count`. InvenTree documents total material as quantity times piece_count.
+        allow_variants:
+          type: boolean
+        inherited:
+          type: boolean
+        optional:
+          type: boolean
+        consumable:
+          type: boolean
+        setup_quantity:
+          type: number
+          format: double
+        attrition:
+          type: number
+          format: double
+          description: InvenTree attrition for the build quantity, documented as a percentage of the base quantity.
+        rounding_multiple:
+          type: number
+          format: double
+          nullable: true
+        note:
+          type: string
+          maxLength: 500
+        validated:
+          type: boolean
+          description: InvenTree flag that this BOM line has been validated. Not a coding-rule result.
+    CodingLookup:
+      type: object
+      additionalProperties: false
+      description: |
+        A stored association, if a later implementation has one. Nothing in
+        this schema is a grammar for connector codes or harness sample-quote
+        codes.
+      required: [code, module]
+      properties:
+        code:
+          type: string
+          description: The requested code, unchanged.
+        module:
+          type: string
+          nullable: true
+          enum:
+            - jinda-connector-coding
+            - jinda-harness-quote-coding
+          description: |
+            Which reserved plugin owns the stored link. Null when no link
+            is stored. The slugs match the empty plugins and do not imply
+            that a rule exists.
+        part:
+          $ref: "#/components/schemas/PartIdentity"

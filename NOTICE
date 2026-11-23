@@ -1,0 +1,25 @@
+This repository runs InvenTree as the PLM application.
+
+InvenTree
+  https://github.com/inventree/InvenTree
+  https://docs.inventree.org/en/stable/start/docker_install/
+  Copyright (c) 2017 - InvenTree Developers
+  MIT License — see LICENSES/InvenTree-MIT.txt
+
+The following files are unmodified copies from InvenTree tag 1.7.3,
+directory contrib/container/:
+
+  docker-compose.yml
+  Caddyfile
+
+.env.example is adapted from contrib/container/.env at that tag.
+The upstream file's commented sample administrator password is not copied
+into this repository. The database password is a placeholder.
+
+docker-compose.override.yml, plugins/, contracts/, and the other original
+files are Copyright (c) 2026 津达立电子 and are covered by LICENSE.
+
+This repository does not vendor the InvenTree source tree. The official
+production install uses the published image inventree/inventree and does
+not require that source. See the InvenTree docker installation page linked
+above ("No Source Required").

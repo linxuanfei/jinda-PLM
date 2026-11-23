@@ -1,0 +1,11 @@
+# Mount the in-repo plugin stubs into the directory the official image already
+# uses. The InvenTree 1.7.3 image sets
+# INVENTREE_PLUGIN_DIR=/home/inventree/data/plugins.
+# docker-compose.yml and Caddyfile are unmodified copies from that tag.
+services:
+  inventree-server:
+    volumes:
+      - ./plugins:/home/inventree/data/plugins:z
+  inventree-worker:
+    volumes:
+      - ./plugins:/home/inventree/data/plugins:z
