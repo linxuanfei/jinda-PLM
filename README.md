@@ -1,8 +1,8 @@
 # 津达立 PLM / Jinda PLM
 
-Phase 1 是一套可独立启动的 PLM 骨架，应用本体是 [InvenTree](https://github.com/inventree/InvenTree)（MIT）。本仓库不替代公司 ERP，不把 PLM 并进 ERP，也不在这里实现库存或财务。连接器编码和线束打样报价编码只有空的插件占位，规则尚未提供。
+Phase 1 是一套可独立启动的 PLM。应用本体是 [InvenTree](https://github.com/inventree/InvenTree)（MIT）。本仓库不替代公司 ERP，不把 PLM 并进 ERP，也不在这里实现库存或财务。连接器料号按 B05（2026-08-03）生成、校验，并与全部已有料号（含旧料号）去重。线束打样报价编码仍是空插件。
 
-Phase 1 is a PLM skeleton that runs on its own. The application is [InvenTree](https://github.com/inventree/InvenTree) (MIT). It does not replace the company ERP, it is not merged into the ERP, and it does not implement inventory or finance. Connector numbering and wire-harness sample-quote numbering are empty plugin stubs. Numbering rules have not been provided.
+Phase 1 is a PLM that runs on its own. The application is [InvenTree](https://github.com/inventree/InvenTree) (MIT). It does not replace the company ERP, it is not merged into the ERP, and it does not implement inventory or finance. Connector part numbers follow B05 (2026-08-03): generate, validate, and dedupe against every existing number, including legacy numbers. Wire-harness sample-quote numbering is still an empty plugin.
 
 InvenTree 自己带有库存和价格界面。那是上游产品的一部分。Phase 1 不把这些界面配置成公司 ERP，ERP 契约里也不包含库存数量和金额。
 
@@ -108,22 +108,22 @@ The database user `pguser` is only for PostgreSQL.
 
 ## 编码插件 / Coding plugins
 
-两个空插件，没有编码规则：
-
-Two empty plugins. They contain no numbering rules.
-
-| 目录 / Directory | 插件类 / Class | 用途 / Reserved for |
+| 目录 / Directory | 插件类 / Class | 状态 / State |
 | --- | --- | --- |
-| `plugins/jinda_connector_coding/` | `JindaConnectorCodingPlugin` | 连接器编码 / connector part numbering |
-| `plugins/jinda_harness_quote_coding/` | `JindaHarnessQuoteCodingPlugin` | 线束打样报价编码 / wire-harness sample-quote numbering |
+| `plugins/jinda_connector_coding/` | `JindaConnectorCodingPlugin` | B05 连接器料号 / B05 connector part numbers |
+| `plugins/jinda_harness_quote_coding/` | `JindaHarnessQuoteCodingPlugin` | 空插件，无线束规则 / empty, no harness rules |
 
-`INVENTREE_PLUGINS_ENABLED=True` 时，InvenTree 会发现它们，并在管理员于 Admin Center 启用之前保持关闭。即使启用，它们也没有 mixin，不会生成或解析编码。
+`INVENTREE_PLUGINS_ENABLED=True` 时，InvenTree 会发现这两个插件。新发现的插件默认关闭，要有职员权限的用户在 Admin Center 里启用 **津达立连接器编码**（`jinda-connector-coding`）后，保存物料 IPN 才会走 B05 校验和全局去重。不要加载 InvenTree 的演示数据。
 
-With `INVENTREE_PLUGINS_ENABLED=True`, InvenTree can discover them. They stay disabled until a staff user enables them in the Admin Center. Enabling them still does not generate or parse a code: the classes have no mixins.
+With `INVENTREE_PLUGINS_ENABLED=True`, InvenTree discovers both plugins. A newly discovered plugin stays off. After a staff user enables **津达立连接器编码** (`jinda-connector-coding`) in the Admin Center, saving a part IPN runs B05 validation and the global duplicate check. Do not load the InvenTree demo data set.
 
-发现方式见 [Developing a Plugin](https://docs.inventree.org/en/stable/plugins/develop/)。新发现的插件默认关闭。
+发现方式见 [Developing a Plugin](https://docs.inventree.org/en/stable/plugins/develop/)。
 
-Discovery is described in [Developing a Plugin](https://docs.inventree.org/en/stable/plugins/develop/). Newly discovered plugins are disabled by default.
+Discovery is described in [Developing a Plugin](https://docs.inventree.org/en/stable/plugins/develop/).
+
+连接器规则在 `plugins/jinda_connector_coding/coding.py`。流水号不补零。卡钩第⑤位 A 为左卡钩、B 为右卡钩。通用型是字母 O。特殊代码按原文写入料号。旧料号保持原样，新建和导入都与全部已有料号去重。
+
+Connector rules are in `plugins/jinda_connector_coding/coding.py`. Serials are not zero-padded. Hook position ⑤ uses A for 左卡钩 and B for 右卡钩. 通用型 is the letter O. A special code is copied into the part number as given. Legacy numbers stay as they are. Create and import check every existing number.
 
 ## ERP 接口 / ERP interface
 
@@ -131,9 +131,9 @@ Discovery is described in [Developing a Plugin](https://docs.inventree.org/en/st
 
 The field contract is [`contracts/erp-interface.openapi.yaml`](contracts/erp-interface.openapi.yaml). It lists the fields for a later read, by the ERP, of part master, BOM, and coding lookup. No process in Phase 1 serves those routes. Until an implementation exists, a server that claims the contract returns HTTP 501 for every operation.
 
-编码查询不解析编码。库存数量和金额不在契约里。
+ERP 的 `/erp/v1/coding` 仍然没有进程提供。连接器编码在插件里完成，不经过这条路由。库存数量和金额不在契约里。
 
-The coding lookup does not parse a code. Stock quantities and money are outside the contract.
+Nothing serves `/erp/v1/coding`. Connector coding runs in the plugin, not on that route. Stock quantities and money stay outside the contract.
 
 ## 许可 / License
 

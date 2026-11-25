@@ -37,8 +37,10 @@ info:
     these routes until an authentication scheme is chosen. InvenTree API
     tokens are not this contract.
 
-    `GET /erp/v1/coding` does not parse or generate a code. The connector
-    and wire-harness sample-quote modules have no rules yet.
+    `GET /erp/v1/coding` is still not served. Connector numbers are
+    generated and validated by JindaConnectorCodingPlugin (B05). The
+    wire-harness sample-quote module has no rules. This route does not
+    parse a code.
 servers:
   - url: https://plm.example.invalid
     description: Not deployed. example.invalid is a reserved name, not a host.
@@ -89,12 +91,11 @@ paths:
   /erp/v1/coding:
     get:
       operationId: lookupCoding
-      summary: Reserved coding lookup. No rules and no parser.
+      summary: Reserved coding lookup. This route is not served.
       description: |
-        Reserved for a later lookup of a connector code (连接器编码) or a
-        wire-harness sample-quote code (线束打样报价编码). The code is an
-        opaque string. This operation must not split it into segments,
-        derive an IPN from it, or invent a format.
+        This HTTP lookup is not served. Connector grammar is implemented by
+        JindaConnectorCodingPlugin (B05), not by this route. Wire-harness
+        sample-quote codes have no rules. This route keeps `code` opaque.
       parameters:
         - name: code
           in: query
@@ -335,9 +336,9 @@ components:
       type: object
       additionalProperties: false
       description: |
-        A stored association, if a later implementation has one. Nothing in
-        this schema is a grammar for connector codes or harness sample-quote
-        codes.
+        A stored association, if a later implementation has one. This schema
+        is not the B05 grammar. B05 generation and validation live in
+        JindaConnectorCodingPlugin. Harness sample-quote codes have no grammar.
       required: [code, module]
       properties:
         code:
@@ -350,8 +351,8 @@ components:
             - jinda-connector-coding
             - jinda-harness-quote-coding
           description: |
-            Which reserved plugin owns the stored link. Null when no link
-            is stored. The slugs match the empty plugins and do not imply
-            that a rule exists.
+            Which plugin owns a stored link. Null when no link is stored.
+            `jinda-connector-coding` is the B05 connector plugin.
+            `jinda-harness-quote-coding` is still an empty slot.
         part:
           $ref: "#/components/schemas/PartIdentity"

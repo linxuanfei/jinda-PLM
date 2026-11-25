@@ -1,7 +1,9 @@
 # 津达立连接器编码 / Jinda connector part numbering
 
-Empty InvenTree plugin. No coding rules are implemented here, and none should be inferred from the class name.
+B05（2026-08-03）《津达电子连接器产品料号编码原则》.
 
-The class `JindaConnectorCodingPlugin` subclasses `InvenTreePlugin` and adds no mixins. InvenTree discovers it from `INVENTREE_PLUGIN_DIR` (`/home/inventree/data/plugins` in the official image) and leaves it disabled until a staff user enables it in the Admin Center.
+`coding.py` generates a part number from fields, validates a candidate, and refuses a number that is already in the pool passed to it. The pool must include legacy numbers that are not B05. `JindaConnectorCodingPlugin` applies that check to the Part IPN when the plugin is enabled.
 
-https://docs.inventree.org/en/stable/plugins/develop/
+Discovered plugins stay off until a staff user enables **津达立连接器编码** in the InvenTree Admin Center. Do not load the InvenTree demo data set.
+
+卡钩 position ⑤ is A = 左卡钩, B = 右卡钩. 通用型 is the letter O. 特殊代码 is free text. 流水 is not zero-padded.

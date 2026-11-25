@@ -1,1 +1,1 @@
-# Empty package. The plugin class lives in plugin.py. No coding rules.
+# Connector coding package. Rules are in coding.py. The plugin class is in plugin.py.
